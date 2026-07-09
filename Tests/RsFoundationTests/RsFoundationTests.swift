@@ -139,7 +139,7 @@ func xml() async throws {
         cnt += 1
     }
 
-    #expect(cnt == 2)
+    #expect(cnt == 4)
 
     #expect(throws: Error.self) {
         _ = try XMLDocument(utf16Data: Data())
