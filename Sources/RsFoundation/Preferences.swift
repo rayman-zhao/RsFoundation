@@ -5,24 +5,25 @@ public protocol ExpressibleByEmptyLiteral {
     init()
 }
 
-/// Protocol can be saved/loaded in a file
-public typealias Preferable = Codable & ExpressibleByEmptyLiteral
+/// A type that can be saved and loaded as a preference value.
+public typealias PreferenceValue = Codable & ExpressibleByEmptyLiteral
 
-/// Protocol for enum types saved/loaded by their raw value
-public protocol RawValuePreferable: RawRepresentable, Preferable {}
+/// Protocol for enum types saved/loaded by their raw value.
+public protocol RawPreferenceValue: RawRepresentable, PreferenceValue {}
 
-fileprivate enum RawValueCodingKey: String, CodingKey {
+private enum RawPreferenceValueCodingKey: String, CodingKey {
     case value
 }
 
-public extension RawValuePreferable where RawValue: Codable {
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: RawValueCodingKey.self)
+/// A container that can load and save preference values from/to persistent storage.
+extension RawPreferenceValue where RawValue: Codable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: RawPreferenceValueCodingKey.self)
         try container.encode(self.rawValue, forKey: .value)
     }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: RawValueCodingKey.self)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: RawPreferenceValueCodingKey.self)
         let rawValue = try container.decode(RawValue.self, forKey: .value)
         guard let instance = Self(rawValue: rawValue) else {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid \(Self.self) value: \(rawValue)"))
@@ -31,17 +32,17 @@ public extension RawValuePreferable where RawValue: Codable {
     }
 }
 
-/// Preferences file protocol
+/// A container that can load and save preference values from/to persistent storage.
 public protocol Preferences {
-    func load<T: Preferable>(for preferableType: T.Type) -> T
-    func save<T: Preferable>(_ preferable: T)
+    func load<T: PreferenceValue>(for preferenceValueType: T.Type) -> T
+    func save<T: PreferenceValue>(_ preferenceValue: T)
 }
 
-/// JSON format preferences file implementation
-public struct JsonPreferences : Preferences {
+/// A JSON-based preferences file implementation.
+public struct JSONPreferences: Preferences {
     let jsonFile: URL
 
-    public func load<T: Preferable>(for preferableType: T.Type) -> T {
+    public func load<T: PreferenceValue>(for preferenceValueType: T.Type) -> T {
         guard jsonFile.reachable else {
             log.info("No preferences file found at \(jsonFile.path). Use defaults.")
             return T()
@@ -54,24 +55,24 @@ public struct JsonPreferences : Preferences {
             log.info("Invalid JSON format at \(jsonFile.path). Use defaults.")
             return T()
         }
-        guard let prefObj = jsonObj[String(describing: preferableType)] else {
-            log.info("No module \(preferableType) found in \(jsonObj). Use defaults.")
+        guard let prefObj = jsonObj[String(describing: preferenceValueType)] else {
+            log.info("No module \(preferenceValueType) found in \(jsonObj). Use defaults.")
             return T()
         }
         guard let prefData = try? JSONSerialization.data(withJSONObject: prefObj) else {
             log.info("Invalid module data \(prefObj). Use defaults")
             return T()
         }
-        guard let pref = try? JSONDecoder().decode(preferableType, from: prefData) else {
+        guard let pref = try? JSONDecoder().decode(preferenceValueType, from: prefData) else {
             log.info("Invalid module json \(String(data: prefData, encoding: .utf8)!). Use defaults")
             return T()
         }
-        
+
         return pref
     }
 
-    public func save<T: Preferable>(_ preferable: T) {
-        guard let prefData = try? JSONEncoder().encode(preferable) else {
+    public func save<T: PreferenceValue>(_ preferenceValue: T) {
+        guard let prefData = try? JSONEncoder().encode(preferenceValue) else {
             log.info("Failed to encode \(T.self) as json")
             return
         }
@@ -83,9 +84,10 @@ public struct JsonPreferences : Preferences {
         var jsonObj: [String: Any] = [:]
 
         if let fileData = try? Data(contentsOf: jsonFile),
-            let existingObj = try? JSONSerialization.jsonObject(with: fileData) as? [String: Any] {
-                //log.info("Load existing \(existingObj.count) preferences")
-                jsonObj = existingObj
+            let existingObj = try? JSONSerialization.jsonObject(with: fileData) as? [String: Any]
+        {
+            //log.info("Load existing \(existingObj.count) preferences")
+            jsonObj = existingObj
         }
 
         jsonObj[String(describing: T.self)] = prefObj
@@ -94,13 +96,13 @@ public struct JsonPreferences : Preferences {
         }
     }
 
-    /// Factory method to make standard application preference file
-    public static func makeAppStandard(group: String, product: String, name: String = "app") -> Preferences {
+    /// Creates a standard application preference file.
+    public static func makeStandard(group: String, product: String, name: String = "app") -> Preferences {
         let fn = "\(group)/\(product)/\(name).json"
-        guard let pref = URL.applicationSupportDirectory.reachingChild(named: fn) else {
+        guard let pref = URL.applicationSupportDirectory.ensuringChild(named: fn) else {
             fatalError("Can't reach preference file at \(fn)")
         }
 
-        return JsonPreferences(jsonFile: pref)
+        return JSONPreferences(jsonFile: pref)
     }
 }

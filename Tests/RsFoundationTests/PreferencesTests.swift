@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import RsFoundation
 
-final class TestPref : Preferable {
+final class TestPref: PreferenceValue {
     var key1: String = "value1"
     var key2: Int = 42
 
@@ -15,12 +15,12 @@ final class TestPref : Preferable {
     }
 }
 
-struct TestPref2 : Preferable {
+struct TestPref2: PreferenceValue {
     var key1: String = "value2"
     var key2: Int = 999
 }
 
-enum Theme: String, RawValuePreferable {
+enum Theme: String, RawPreferenceValue {
     case dark
     case light
 
@@ -29,7 +29,7 @@ enum Theme: String, RawValuePreferable {
     }
 }
 
-enum Theme2: String, RawValuePreferable {
+enum Theme2: String, RawPreferenceValue {
     case auto
 
     public init() {
@@ -47,13 +47,13 @@ func defaultPref(_ pref: Preferences) {
 struct PreferencesTests {
     @Test
     func notExistAppPref() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "tempxxx")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "tempxxx")
         defaultPref(pref)
     }
 
     @Test
     func emptyAppPref() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "temp")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "temp")
         let content = ""
         let url = URL.applicationSupportDirectory.appending(path: "/SwiftWorks/Ruslan/temp.json")
         try content.write(to: url, atomically: true, encoding: .utf8)
@@ -66,7 +66,7 @@ struct PreferencesTests {
 
     @Test
     func emptyJsonAppPref() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "temp2")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "temp2")
         let content = "{}"
         let url = URL.applicationSupportDirectory.appending(path: "/SwiftWorks/Ruslan/temp2.json")
         try content.write(to: url, atomically: true, encoding: .utf8)
@@ -79,7 +79,7 @@ struct PreferencesTests {
 
     @Test
     func nomoduleJsonAppPref() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "temp3")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "temp3")
         let content = """
         {
             "abc": {"key1": "123", "key2": 777}
@@ -96,7 +96,7 @@ struct PreferencesTests {
 
     @Test
     func moduleJsonAppPref() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "temp4")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "temp4")
         let content = """
         {
             "TestPref": {"key1": "123", "key2": 777, "theme": "auto"},
@@ -123,11 +123,11 @@ struct PreferencesTests {
 
     @Test
     func saveModulePref() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "temp5")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "temp5")
         defer {
             try? FileManager.default.removeItem(at: URL.applicationSupportDirectory.appending(path: "/SwiftWorks/Ruslan/temp5.json"))
         }
-        
+
         let test = TestPref(key1: "abcd", key2: 666)
         pref.save(test)
 
@@ -135,17 +135,17 @@ struct PreferencesTests {
         #expect(test2.key1 == "abcd")
         #expect(test2.key2 == 666)
 
-        let theme: Theme  = .dark
+        let theme: Theme = .dark
         pref.save(theme)
     }
 
     @Test
     func saveModulePrefWithOthers() async throws {
-        let pref = JsonPreferences.makeAppStandard(group: "SwiftWorks", product: "Ruslan", name: "temp6")
+        let pref = JSONPreferences.makeStandard(group: "SwiftWorks", product: "Ruslan", name: "temp6")
         defer {
             try? FileManager.default.removeItem(at: URL.applicationSupportDirectory.appending(path: "/SwiftWorks/Ruslan/temp6.json"))
         }
-        
+
         pref.save(TestPref())
         pref.save(TestPref2(key1: "####", key2: -1))
 
