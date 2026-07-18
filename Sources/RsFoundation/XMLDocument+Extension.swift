@@ -1,7 +1,6 @@
 import Foundation
 
-#if os(macOS)
-#else
+#if os(Windows)
     import FoundationXML
 
     class XMLParser {
@@ -9,8 +8,8 @@ import Foundation
             case emptyDocumentError
         }
     }
-
 #endif
+
 extension XMLDocument {
     /// Constructs an XML document from UTF-16 encoded data.
     ///

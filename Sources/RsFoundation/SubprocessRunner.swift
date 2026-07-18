@@ -11,6 +11,7 @@ private let newLineAndQuotes: CharacterSet = {
 
     return characterSet
 }()
+
 public class SubprocessRunner {
     var procPath: String!
     var procTask: Task<Void, any Error>!

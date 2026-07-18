@@ -1,4 +1,5 @@
 import Foundation
+
 #if os(Windows)
     import WinSDK
 

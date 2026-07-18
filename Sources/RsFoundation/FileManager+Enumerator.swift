@@ -46,6 +46,7 @@ private final class WindowsDirectoryEnumerator: FileManager.DirectoryEnumerator 
         }
     }
 }
+
 extension FileManager {
     /// Returns an improved directory enumerator.
     ///
