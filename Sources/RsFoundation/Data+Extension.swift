@@ -1,9 +1,10 @@
+import Foundation
+
 #if os(macOS)
     import CryptoKit
 #else
     import Crypto
 #endif
-import Foundation
 
 extension Data {
     /// Append bytes of an integer to the data.

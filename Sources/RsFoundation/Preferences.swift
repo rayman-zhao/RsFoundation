@@ -26,7 +26,10 @@ extension RawPreferenceValue where RawValue: Codable {
         let container = try decoder.container(keyedBy: RawPreferenceValueCodingKey.self)
         let rawValue = try container.decode(RawValue.self, forKey: .value)
         guard let instance = Self(rawValue: rawValue) else {
-            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid \(Self.self) value: \(rawValue)"))
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Invalid \(Self.self) value: \(rawValue)"))
         }
         self = instance
     }
@@ -51,7 +54,8 @@ public struct JSONPreferences: Preferences {
             log.info("Failed open preferences file at \(jsonFile.path). Use defaults.")
             return T()
         }
-        guard let jsonObj = try? JSONSerialization.jsonObject(with: fileData) as? [String: Any] else {
+        guard let jsonObj = try? JSONSerialization.jsonObject(with: fileData) as? [String: Any]
+        else {
             log.info("Invalid JSON format at \(jsonFile.path). Use defaults.")
             return T()
         }
@@ -64,7 +68,8 @@ public struct JSONPreferences: Preferences {
             return T()
         }
         guard let pref = try? JSONDecoder().decode(preferenceValueType, from: prefData) else {
-            log.info("Invalid module json \(String(data: prefData, encoding: .utf8)!). Use defaults")
+            log.info(
+                "Invalid module json \(String(data: prefData, encoding: .utf8)!). Use defaults")
             return T()
         }
 
@@ -86,7 +91,7 @@ public struct JSONPreferences: Preferences {
         if let fileData = try? Data(contentsOf: jsonFile),
             let existingObj = try? JSONSerialization.jsonObject(with: fileData) as? [String: Any]
         {
-            //log.info("Load existing \(existingObj.count) preferences")
+            // log.info("Load existing \(existingObj.count) preferences")
             jsonObj = existingObj
         }
 
@@ -97,7 +102,9 @@ public struct JSONPreferences: Preferences {
     }
 
     /// Creates a standard application preference file.
-    public static func makeStandard(group: String, product: String, name: String = "app") -> Preferences {
+    public static func makeStandard(group: String, product: String, name: String = "app")
+        -> Preferences
+    {
         let fn = "\(group)/\(product)/\(name).json"
         guard let pref = URL.applicationSupportDirectory.ensuringChild(named: fn) else {
             fatalError("Can't reach preference file at \(fn)")

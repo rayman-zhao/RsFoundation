@@ -31,7 +31,10 @@ import Foundation
                     log.info("Failed to read localization data of \(path)")
                     return
                 }
-                guard let jsonObj = try? JSONSerialization.jsonObject(with: fileData) as? [String: Any] else {
+                guard
+                    let jsonObj = try? JSONSerialization.jsonObject(with: fileData)
+                        as? [String: Any]
+                else {
                     log.info("Failed to parse JSON of \(path)")
                     return
                 }

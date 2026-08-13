@@ -20,7 +20,7 @@ import Foundation
     }
 
     private func verQueryValue(_ block: [UInt8], _ subBlock: String) -> [UInt8]? {
-        var buffer: UnsafeMutableRawPointer? = nil
+        var buffer: UnsafeMutableRawPointer?
         var len: UINT = 0
 
         let ok = VerQueryValueW(block, subBlock.wideString, &buffer, &len)

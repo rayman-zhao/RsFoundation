@@ -26,7 +26,9 @@ extension XMLDocument {
         #else
             guard !utf16Data.isEmpty else { throw XMLParser.ErrorCode.emptyDocumentError }  // Empty data will crash on Windows even with try.
             let str = String(utf16Data: utf16Data)
-            let xml = str.replacing("<?xml version=\"1.0\" encoding=\"unicode\" ?>", with: "<?xml version=\"1.0\" encoding=\"utf-8\" ?>")
+            let xml = str.replacing(
+                "<?xml version=\"1.0\" encoding=\"unicode\" ?>",
+                with: "<?xml version=\"1.0\" encoding=\"utf-8\" ?>")
             try self.init(xmlString: xml, options: options)
         #endif
     }

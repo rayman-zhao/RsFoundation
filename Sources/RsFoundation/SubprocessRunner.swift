@@ -4,7 +4,7 @@ import Subprocess
 import SystemPackage
 
 private let newLineAndQuotes: CharacterSet = {
-    var characterSet = CharacterSet()  //CharacterSet.whitespacesAndNewlines
+    var characterSet = CharacterSet()  // CharacterSet.whitespacesAndNewlines
     characterSet.insert(charactersIn: "\"")
     characterSet.insert(charactersIn: "\r")
     characterSet.insert(charactersIn: "\n")
@@ -19,7 +19,10 @@ public class SubprocessRunner {
     public init() {
     }
 
-    public func start(executable: String, arguments: [String], workingDirectory: String, outputHandler: @escaping @Sendable (String) -> Void = { (_) in }) {
+    public func start(
+        executable: String, arguments: [String], workingDirectory: String,
+        outputHandler: @escaping @Sendable (String) -> Void = { (_) in }
+    ) {
         log.info("Starting \(executable)")
         log.info("with \(arguments.joined(separator: " "))")
         log.info("in \(workingDirectory)")
@@ -31,7 +34,7 @@ public class SubprocessRunner {
                 arguments: Arguments(arguments),
                 workingDirectory: workingDirectory.isEmpty ? nil : FilePath(workingDirectory),
                 preferredBufferSize: 1
-            ) { exec, input, stdout, stderr in
+            ) { _, _, stdout, stderr in
                 for try await message in merge(stdout.lines(), stderr.lines()) {
                     outputHandler(message.trimmingCharacters(in: newLineAndQuotes))
                 }
