@@ -138,3 +138,27 @@ import Foundation
     }
 
 #endif
+
+extension String {
+    /// XML 特殊字符转义（写入XML文本节点/属性值）
+    public func xmlEscaped() -> String {
+        return
+            self
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&apos;")
+    }
+
+    /// XML 反转义
+    public func xmlUnescaped() -> String {
+        return
+            self
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&apos;", with: "'")
+    }
+}

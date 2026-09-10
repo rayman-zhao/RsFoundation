@@ -46,7 +46,10 @@ func logger() async throws {
         @Test(arguments: [
             ("hello", "Hello", "你好"),
             ("interpolation", "Interpolation %@ as string", "插值 %@ 字符串"),
-            ("multiple interpolations", "Interpolation %lld as int, and %@ as string", "插值 %lld 整数，以及 %@ 字符串"),
+            (
+                "multiple interpolations", "Interpolation %lld as int, and %@ as string",
+                "插值 %lld 整数，以及 %@ 字符串"
+            ),
         ])
         func localize(_ key: String, _ eng: String, _ chn: String) async throws {
             let en = Locale(identifier: "en")
@@ -79,6 +82,13 @@ func logger() async throws {
         #expect(str == str3)
     }
 #endif
+
+@Test
+func string() async throws {
+    let str = "<hello & world>'foo'"
+    #expect(str.xmlEscaped() == "&lt;hello &amp; world&gt;&apos;foo&apos;")
+    #expect(str.xmlEscaped().xmlUnescaped() == str)
+}
 
 @Test
 func url() async throws {
