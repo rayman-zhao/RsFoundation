@@ -115,6 +115,24 @@ func url() async throws {
     try? FileManager.default.removeItem(at: dir.ensuringChild(named: "A/B")!)
     try? FileManager.default.removeItem(at: dir.ensuringChild(named: "A/")!)
 }
+
+@Test
+func availableChild() throws {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(
+            "RsFoundationTest_AvailableChild_\(UUID().uuidString)",
+            isDirectory: true
+        )
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    for name in ["report.txt", "report 2.txt"] {
+        try Data().write(to: directory.appendingPathComponent(name))
+    }
+
+    #expect(directory.availableChild(baseNamed: "report.txt")?.lastPathComponent == "report 3.txt")
+}
+
 @Test
 func xml() async throws {
     // let xml = try XMLDocument(xmlString:

@@ -108,6 +108,24 @@ extension URL {
         return url.reachable ? url : nil
     }
 
+    public func availableChild(baseNamed child: String) -> URL? {
+        guard self.hasDirectoryPath else { return nil }
+
+        let childURL = URL(filePath: child)
+        let baseName = childURL.deletingPathExtension().lastPathComponent
+        let pathExtension = childURL.pathExtension
+        var index = 1
+
+        while true {
+            let name = index == 1 ? baseName : "\(baseName) \(index)"
+            let candidate = pathExtension.isEmpty ? name : "\(name).\(pathExtension)"
+            let url = self.appending(component: candidate)
+
+            if !url.reachable { return url }
+            index += 1
+        }
+    }
+
     /// Gets the URL of a child in subfolders of a directory, creating intermediate directories if needed.
     ///
     /// - Parameter child: The path to the child like f1/f2/child.ext.
