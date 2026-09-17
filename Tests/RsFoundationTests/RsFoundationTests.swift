@@ -96,11 +96,26 @@ func url() async throws {
     let url = URL(filePath: test_txt)
     #expect(url.fileSize == 0)
     #expect(url.filePath == test_txt)
+    #expect(url.isDirectory == false)
     #expect(url.reachableSibling(named: "test2.txt") != nil)
     #expect(url.reachableSibling(named: "test2.txt")?.fileSize == 0)
 
     let url2 = Bundle.module.resourceURL?.reachableChild(named: "test2.txt")
     #expect(url2 != nil)
+
+    // Directory detection must rely on the file system, not on how the URL was constructed.
+    var resourceDirPath = Bundle.module.resourceURL!.filePath
+    while resourceDirPath.last == "/" || resourceDirPath.last == "\\" {
+        resourceDirPath.removeLast()
+    }
+    let noHintDir = URL(filePath: resourceDirPath)
+    #expect(noHintDir.hasDirectoryPath == false)
+    #expect(noHintDir.isDirectory)
+    #expect(noHintDir.reachableChild(named: "test.txt") != nil)
+
+    let hintedFile = URL(filePath: test_txt, directoryHint: .isDirectory)
+    #expect(hintedFile.isDirectory == false)
+    #expect(hintedFile.reachableSibling(named: "test2.txt") != nil)
 
     let dir = URL.applicationSupportDirectory
     #expect(dir.filePath.hasSuffix("/") && !dir.filePath.hasPrefix("/"))
@@ -131,6 +146,12 @@ func availableChild() throws {
     }
 
     #expect(directory.availableChild(baseNamed: "report.txt")?.lastPathComponent == "report 3.txt")
+
+    var dirPath = directory.filePath
+    while dirPath.last == "/" || dirPath.last == "\\" {
+        dirPath.removeLast()
+    }
+    #expect(URL(filePath: dirPath).availableChild(baseNamed: "report.txt")?.lastPathComponent == "report 3.txt")
 }
 
 @Test

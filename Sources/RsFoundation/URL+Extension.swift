@@ -95,6 +95,20 @@ extension URL {
         return (try? checkResourceIsReachable()) ?? false
     }
 
+    /// Whether the URL references a directory.
+    ///
+    /// `hasDirectoryPath` only reflects how the URL was constructed (a trailing path separator or an
+    /// `isDirectory: true` hint), so it can report an actual directory as a file and vice versa.
+    /// This checks the file system instead, and falls back to `hasDirectoryPath` when the resource
+    /// can't be examined, e.g. it doesn't exist yet.
+    public var isDirectory: Bool {
+        if let isDirectory = (try? resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory {
+            return isDirectory
+        }
+
+        return hasDirectoryPath
+    }
+
     /// Get the URL of a child file in a directory
     ///
     /// The URL self should be a directory.
@@ -102,14 +116,14 @@ extension URL {
     /// - Parameter child: The file name of the child file in the directory.
     /// - Returns: Child URL, or nil if can't find it in the directory.
     public func reachableChild(named child: String) -> URL? {
-        guard self.hasDirectoryPath else { return nil }
+        guard self.isDirectory else { return nil }
 
         let url = self.appending(component: child)
         return url.reachable ? url : nil
     }
 
     public func availableChild(baseNamed child: String) -> URL? {
-        guard self.hasDirectoryPath else { return nil }
+        guard self.isDirectory else { return nil }
 
         let childURL = URL(filePath: child)
         let baseName = childURL.deletingPathExtension().lastPathComponent
@@ -131,7 +145,7 @@ extension URL {
     /// - Parameter child: The path to the child like f1/f2/child.ext.
     /// - Returns: Child URL, or nil if intermediate directories cannot be created.
     public func ensuringChild(named child: String) -> URL? {
-        guard self.hasDirectoryPath else { return nil }
+        guard self.isDirectory else { return nil }
 
         let url = self.appending(path: child)
         let dir = url.hasDirectoryPath ? url : url.deletingLastPathComponent()
@@ -151,7 +165,7 @@ extension URL {
     /// - Parameter sibling: The file name of sibling file in the same directory.
     /// - Returns: Sibling URL, or nil if can't find it in the same directory.
     public func reachableSibling(named sibling: String) -> URL? {
-        guard self.hasDirectoryPath == false else { return nil }
+        guard self.isDirectory == false else { return nil }
 
         let url = self.deletingLastPathComponent().appending(component: sibling)
         return url.reachable ? url : nil
