@@ -37,11 +37,17 @@ public class SubprocessRunner {
 
         procPath = executable
         procTask = Task {
+            var platformOptions = PlatformOptions()
+            platformOptions.teardownSequence = [
+                .gracefulShutDown(allowedDurationToNextStep: .seconds(5))
+            ]
+
             _ = try await run(
                 executable.contains(where: pathSeparators.contains)
                     ? .path(FilePath(executable)) : .name(executable),
                 arguments: Arguments(arguments),
                 workingDirectory: workingDirectory.isEmpty ? nil : FilePath(workingDirectory),
+                platformOptions: platformOptions,
                 input: .none,
                 output: .sequence,
                 error: .sequence
@@ -56,6 +62,7 @@ public class SubprocessRunner {
         }
     }
 
+    /// Triggers the teardown sequence without waiting for process exit.
     public func stop() {
         if let procPath, let procTask {
             log.info("Stopping \(procPath)")
@@ -65,6 +72,17 @@ public class SubprocessRunner {
                 try? await procTask.value
                 log.info("Stopped \(procPath)")
             }
+        }
+    }
+
+    /// Triggers the teardown sequence and waits until the process has exited.
+    public func stop() async {
+        if let procPath, let procTask {
+            log.info("Stopping \(procPath)")
+
+            procTask.cancel()
+            try? await procTask.value
+            log.info("Stopped \(procPath)")
         }
     }
 }
