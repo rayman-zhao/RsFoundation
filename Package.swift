@@ -1,4 +1,4 @@
-// swift-tools-version: 6.3
+// swift-tools-version: 6.4
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,13 +6,13 @@ import PackageDescription
 let package = Package(
     name: "RsFoundation",
     platforms: [
-    	.macOS(.v15),
+        .macOS(.v15)
     ],
     products: [
         .library(
             name: "RsFoundation",
             targets: ["RsFoundation"]
-        ),
+        )
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -26,7 +26,9 @@ let package = Package(
             name: "RsFoundation",
             dependencies: [
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Crypto", package: "swift-crypto", condition: .when(platforms: [.windows])),
+                .product(
+                    name: "Crypto", package: "swift-crypto", condition: .when(platforms: [.windows])
+                ),
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Subprocess", package: "swift-subprocess"),
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
@@ -36,7 +38,7 @@ let package = Package(
             name: "RsFoundationTests",
             dependencies: ["RsFoundation"],
             resources: [
-            	.copy("Resources/"),
+                .copy("Resources/")
             ],
         ),
     ]
