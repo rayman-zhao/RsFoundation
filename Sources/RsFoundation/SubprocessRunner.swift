@@ -12,6 +12,14 @@ private let newLineAndQuotes: CharacterSet = {
     return characterSet
 }()
 
+#if os(Windows)
+// Windows treats ":" as a location separator (drive letter), so it disqualifies
+// a bare name just like "/" and "\" do.
+private let pathSeparators: Set<Character> = ["/", "\\", ":"]
+#else
+private let pathSeparators: Set<Character> = ["/"]
+#endif
+
 public class SubprocessRunner {
     var procPath: String!
     var procTask: Task<Void, any Error>!
@@ -30,12 +38,18 @@ public class SubprocessRunner {
         procPath = executable
         procTask = Task {
             _ = try await run(
-                .name(executable),
+                executable.contains(where: pathSeparators.contains)
+                    ? .path(FilePath(executable)) : .name(executable),
                 arguments: Arguments(arguments),
                 workingDirectory: workingDirectory.isEmpty ? nil : FilePath(workingDirectory),
-                preferredBufferSize: 1
-            ) { _, _, stdout, stderr in
-                for try await message in merge(stdout.lines(), stderr.lines()) {
+                input: .none,
+                output: .sequence,
+                error: .sequence
+            ) { execution in
+                for try await message in merge(
+                    execution.standardOutput.strings(),
+                    execution.standardError.strings()
+                ) {
                     outputHandler(message.trimmingCharacters(in: newLineAndQuotes))
                 }
             }
