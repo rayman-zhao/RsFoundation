@@ -129,6 +129,17 @@ func url() async throws {
     try? FileManager.default.removeItem(at: dir3!)
     try? FileManager.default.removeItem(at: dir.ensuringChild(named: "A/B")!)
     try? FileManager.default.removeItem(at: dir.ensuringChild(named: "A/")!)
+
+    #if os(Windows)
+        // Network paths: the \\server\share prefix must survive filePath, whether the
+        // server is encoded as the leading "//" of the path or as the URL host.
+        let unc = URL(filePath: "//med-dev/transfer/file.txt")
+        #expect(unc.filePath == "//med-dev/transfer/file.txt")
+        #expect(URL(filePath: unc.filePath).filePath == unc.filePath)
+
+        let uncHosted = URL(string: "file://med-dev/transfer/file.txt")!
+        #expect(uncHosted.filePath == "//med-dev/transfer/file.txt")
+    #endif
 }
 
 @Test

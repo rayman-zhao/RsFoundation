@@ -78,11 +78,18 @@ extension URL {
     /// The file path of the URL.
     ///
     /// On Windows, the deprecated URL.path has no suffix "/" for directories, and URL.path() has an unnecessary prefix "/".
+    /// Network paths keep their `\\server\share` prefix, whether the server is encoded as the leading "//" of the
+    /// path or as the host of a "file://server/share" URL.
     public var filePath: String {
         var p = self.path(percentEncoded: false)
 
         #if os(Windows)
-            if p.hasPrefix("/") {
+            if let host = self.host(), !host.isEmpty, self.scheme == nil || self.isFileURL {
+                p = "//" + host + p
+            } else if p.hasPrefix("//") {
+                // The leading "//" is the \\server\share UNC prefix; stripping it would
+                // turn the network path into one rooted at the current drive.
+            } else if p.hasPrefix("/") {
                 p.removeFirst()
             }
         #endif
