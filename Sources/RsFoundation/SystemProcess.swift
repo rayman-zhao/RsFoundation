@@ -68,7 +68,7 @@ public enum SystemProcess {
     ///
     /// - Parameters:
     ///   - pid: The PID of the process to terminate.
-    ///   - name: The required executable file name, e.g. "javaw.exe"
+    ///   - name: The required executable file name without extension, e.g. "javaw"
     ///     (compared case-insensitively).
     /// - Returns: Whether the process was terminated.
     @discardableResult
@@ -85,8 +85,8 @@ public enum SystemProcess {
             guard QueryFullProcessImageNameW(process, 0, &path, &length) else { return false }
             let exePath = String(utf16: path)
             guard
-                URL(fileURLWithPath: exePath).lastPathComponent.caseInsensitiveCompare(name)
-                    == .orderedSame
+                URL(filePath: exePath).deletingPathExtension().lastPathComponent
+                    .caseInsensitiveCompare(name) == .orderedSame
             else {
                 return false
             }
