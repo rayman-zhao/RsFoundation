@@ -18,7 +18,7 @@ func testStartStop() async throws {
         print("output: \($0)")
     }
 
-    let result = await runner.procTask.result
+    let result = await runner.procTask?.result
     if case .success = result {
     } else {
         #expect(Bool(false))

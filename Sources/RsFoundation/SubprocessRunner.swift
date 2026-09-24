@@ -21,8 +21,14 @@ private let newLineAndQuotes: CharacterSet = {
 #endif
 
 public class SubprocessRunner {
-    var procPath: String!
-    var procTask: Task<Void, any Error>!
+    var procPath: String?
+    var procTask: Task<Void, any Error>?
+
+    /// Whether the runner has started a subprocess in its lifetime;
+    /// remains true after the subprocess stops.
+    public var hasStarted: Bool {
+        procPath != nil && procTask != nil
+    }
 
     public init() {
     }
@@ -65,12 +71,12 @@ public class SubprocessRunner {
     /// Triggers the teardown sequence without waiting for process exit.
     public func stop() {
         if let procPath, let procTask {
-            log.info("Stopping \(procPath)")
+            log.info("Sync stopping \(procPath)")
 
             Task {
                 procTask.cancel()
                 try? await procTask.value
-                log.info("Stopped \(procPath)")
+                log.info("Sync stopped \(procPath)")
             }
         }
     }
@@ -78,11 +84,11 @@ public class SubprocessRunner {
     /// Triggers the teardown sequence and waits until the process has exited.
     public func stop() async {
         if let procPath, let procTask {
-            log.info("Stopping \(procPath)")
+            log.info("Async stopping \(procPath)")
 
             procTask.cancel()
             try? await procTask.value
-            log.info("Stopped \(procPath)")
+            log.info("Async stopped \(procPath)")
         }
     }
 }
