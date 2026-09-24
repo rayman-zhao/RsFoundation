@@ -13,11 +13,11 @@ private let newLineAndQuotes: CharacterSet = {
 }()
 
 #if os(Windows)
-// Windows treats ":" as a location separator (drive letter), so it disqualifies
-// a bare name just like "/" and "\" do.
-private let pathSeparators: Set<Character> = ["/", "\\", ":"]
+    // Windows treats ":" as a location separator (drive letter), so it disqualifies
+    // a bare name just like "/" and "\" do.
+    private let pathSeparators: Set<Character> = ["/", "\\", ":"]
 #else
-private let pathSeparators: Set<Character> = ["/"]
+    private let pathSeparators: Set<Character> = ["/"]
 #endif
 
 public class SubprocessRunner {
@@ -39,7 +39,7 @@ public class SubprocessRunner {
         procTask = Task {
             var platformOptions = PlatformOptions()
             platformOptions.teardownSequence = [
-                .gracefulShutDown(allowedDurationToNextStep: .seconds(5))
+                .gracefulShutDown(allowedDurationToNextStep: .milliseconds(1))
             ]
 
             _ = try await run(
