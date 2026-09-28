@@ -206,7 +206,7 @@ extension URLSession {
 
             let elapsed = DispatchTime.now().uptimeNanoseconds - startedAt
             if let minDuration {
-                let duration: UInt64 = UInt64(minDuration * 1_000_000)
+                let duration: UInt64 = UInt64(minDuration * 1_000_000_000)
                 if duration > elapsed {
                     try? await Task.sleep(nanoseconds: duration - elapsed)
                 }
