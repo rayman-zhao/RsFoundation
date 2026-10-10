@@ -76,4 +76,20 @@ extension DateFormatter {
             timeStyle = systemTime ? (systemTimeWithSeconds ? .medium : .short) : .none
         #endif
     }
+
+    /// 系统短日期中"日"是否先于"月"——紧凑日-月格式（`dd/MM` vs `MM/dd`）
+    /// 的次序裁决。取自系统短日期 pattern 里 `d`/`M` 的先后；无法判定时
+    /// 回退 `false`（月先，多数 locale 的默认次序）。
+    ///
+    /// 注意不能用 `Locale.current` + `setLocalizedDateFormatFromTemplate`
+    /// 替代：swift-foundation 在 Windows 上不跟随用户区域设置（实测 zh-CN
+    /// 系统解析为 en_001，日/月次序随之取反）。
+    public static var systemShortDateIsDayFirst: Bool {
+        let formatter = DateFormatter(systemDate: true, systemTime: false)
+        guard let pattern = formatter.dateFormat,
+            let day = pattern.firstIndex(of: "d")
+        else { return false }
+        guard let month = pattern.firstIndex(of: "M") else { return true }
+        return day < month
+    }
 }
