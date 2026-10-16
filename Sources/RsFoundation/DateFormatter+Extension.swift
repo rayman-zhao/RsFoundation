@@ -11,7 +11,7 @@ import Foundation
         var buffer = [WCHAR](repeating: 0, count: Int(size))
         let result = GetLocaleInfoEx(nil, DWORD(lcType), &buffer, size)
         guard result > 0 else { return nil }
-        return String(decodingCString: buffer, as: UTF16.self)
+        return String(decoding: buffer, as: UTF16.self)
     }
 
     /// Converts a Windows date/time picture (e.g. "yyyy/M/d") into an ICU pattern.

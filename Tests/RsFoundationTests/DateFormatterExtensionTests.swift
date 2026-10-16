@@ -15,7 +15,7 @@ import Testing
             guard size > 0 else { return nil }
             var buffer = [WCHAR](repeating: 0, count: Int(size))
             guard GetLocaleInfoEx(nil, DWORD(lcType), &buffer, size) > 0 else { return nil }
-            return String(decodingCString: buffer, as: UTF16.self)
+            return String(decoding: buffer, as: UTF16.self)
         }
 
         /// The documented Windows-picture -> ICU-pattern mapping, as a test

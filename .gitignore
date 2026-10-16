@@ -36,6 +36,9 @@ Package.resolved
 .zcode/
 .zcodeignore
 
+# Stray resource-bundle manifest SwiftBuild 6.4 writes to the package root on Windows
+/Info.plist
+
 #.swiftpm/configuration/registries.json
 #.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 
