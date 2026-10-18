@@ -11,7 +11,7 @@ extension Data {
     ///
     /// - Parameter value: The integer will be appended
     public mutating func append(_ value: Int) {
-        append(Swift.withUnsafeBytes(of: value) { Data($0) })
+        Swift.withUnsafeBytes(of: value) { append(contentsOf: $0) }
     }
 
     /// Append bytes of a C-string to the data.
@@ -49,12 +49,10 @@ extension Data {
 
     /// A boolean value indicating whether the buffer is JPEG data.
     public var isJPEG: Bool {
-        let cnt = self.count
-        return cnt > 6
-            && self[0] == 0xFF && self[1] == 0xD8 && self[2] == 0xFF
+        count > 6
+            && starts(with: [0xFF, 0xD8, 0xFF])
             && (self[3] == 0xE0 || self[3] == 0xE1 || self[3] == 0xDB)
-            && self[cnt - 2] == 0xFF && self.last == 0xD9
-
+            && suffix(2).elementsEqual([0xFF, 0xD9])
     }
 
     /// A boolean value indicating whether the buffer is any kind of image data.

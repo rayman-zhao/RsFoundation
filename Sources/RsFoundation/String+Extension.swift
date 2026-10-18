@@ -1,12 +1,21 @@
 import Foundation
 
 #if os(Windows)
+    import Synchronization
     import WinSDK
 
+    /// A parsed .xcstrings string catalog, decoded once and shared across threads.
+    private struct StringCatalog: Sendable, Codable {
+        var strings: [String: Entry]
+
+        struct Entry: Codable { var localizations: [String: Localization]? }
+        struct Localization: Codable { var stringUnit: StringUnit? }
+        struct StringUnit: Codable { var value: String }
+    }
+
     extension String {
-        static private let lock = NSLock()
         static nonisolated(unsafe) private let interpolationParameters = /\d+\$\(\w+\)/
-        static nonisolated(unsafe) private var localizations: [String: [String: Any]] = [:]
+        static private let localizations = Mutex<[String: StringCatalog]>([:])
 
         public init(
             localized keyAndValue: String,
@@ -23,41 +32,32 @@ import Foundation
                 return
             }
 
-            String.lock.lock()
-            defer { String.lock.unlock() }
-
-            if !String.localizations.keys.contains(path) {
-                guard let fileData = try? Data(contentsOf: URL(filePath: path)) else {
-                    log.info("Failed to read localization data of \(path)")
-                    return
-                }
+            let catalog: StringCatalog? = String.localizations.withLock { cache in
+                if let catalog = cache[path] { return catalog }
                 guard
-                    let jsonObj = try? JSONSerialization.jsonObject(with: fileData)
-                        as? [String: Any]
+                    let fileData = try? Data(contentsOf: URL(filePath: path)),
+                    let catalog = try? JSONDecoder().decode(StringCatalog.self, from: fileData)
                 else {
-                    log.info("Failed to parse JSON of \(path)")
-                    return
+                    log.info("Failed to load string catalog \(path)")
+                    return nil
                 }
-                guard let strings = jsonObj["strings"] as? [String: Any] else {
-                    log.info("Failed to load strings from \(path)")
-                    return
-                }
-                String.localizations[path] = strings
+                cache[path] = catalog
                 log.info("Cached \(path)")
+                return catalog
             }
 
-            guard let strings = String.localizations[path],
-                let kv = strings[keyAndValue] as? [String: Any],
-                let loc = kv["localizations"] as? [String: Any],
-                let trans = loc[locale.identifier] as? [String: Any],
-                let unit = trans["stringUnit"] as? [String: Any],
-                let v = unit["value"] as? String
+            // A load failure was already logged; keep the key as the value.
+            guard let catalog else { return }
+
+            guard
+                let value = catalog.strings[keyAndValue]?
+                    .localizations?[locale.identifier]?.stringUnit?.value
             else {
                 log.info("Failed to find \(keyAndValue) of \(locale.identifier)")
                 return
             }
 
-            self = v.replacing(String.interpolationParameters, with: "")  // Ignore parameter, use format instead.
+            self = value.replacing(String.interpolationParameters, with: "")  // Ignore parameter, use format instead.
         }
 
         public init(utf16: [UInt16]) {

@@ -1,5 +1,6 @@
 import Foundation
 
 extension UUID {
-    public static let zero: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+    public static let zero = UUID(
+        uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 }

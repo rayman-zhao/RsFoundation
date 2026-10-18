@@ -200,17 +200,14 @@ extension URLSession {
         }
 
         Task {
-            let startedAt = DispatchTime.now().uptimeNanoseconds
+            // Sleep until the deadline, not by the remaining delta: if the request
+            // already took longer than minDuration, sleep returns immediately.
+            let clock = ContinuousClock()
+            let deadline = minDuration.map { clock.now + .seconds($0) }
 
             let (success, data) = await put(urlString: urlString, bodyData: bodyData)
 
-            let elapsed = DispatchTime.now().uptimeNanoseconds - startedAt
-            if let minDuration {
-                let duration: UInt64 = UInt64(minDuration * 1_000_000_000)
-                if duration > elapsed {
-                    try? await Task.sleep(nanoseconds: duration - elapsed)
-                }
-            }
+            if let deadline { try? await clock.sleep(until: deadline) }
 
             await MainActor.run { onCompleted(success, data) }
         }

@@ -20,44 +20,39 @@ public enum SystemProcess {
                     nil, &size, false, ULONG(family), TCP_TABLE_OWNER_PID_ALL, 0)
                 guard size >= MemoryLayout<MIB_TCPTABLE_OWNER_PID>.size else { continue }
 
-                let buffer = UnsafeMutableRawPointer.allocate(
-                    byteCount: Int(size), alignment: MemoryLayout<DWORD>.alignment)
-                defer { buffer.deallocate() }
-                guard
-                    GetExtendedTcpTable(
-                        buffer, &size, false, ULONG(family), TCP_TABLE_OWNER_PID_ALL, 0) == 0
-                else {
-                    continue
-                }
-
                 // The table header is a single dwNumEntries DWORD, immediately
                 // followed by the MIB_TCP(6)ROW_OWNER_PID entries.
-                let listening = DWORD(MIB_TCP_STATE_LISTEN.rawValue)
-                let rows = buffer.advanced(by: MemoryLayout<DWORD>.size)
-                let rowCount = Int(buffer.assumingMemoryBound(to: DWORD.self).pointee)
-                if family == AF_INET {
-                    let table = rows.assumingMemoryBound(to: MIB_TCPROW_OWNER_PID.self)
-                    for i in 0..<rowCount {
-                        let row = table[i]
-                        if row.dwState == listening,
-                            UInt16(bigEndian: UInt16(truncatingIfNeeded: row.dwLocalPort)) == port,
-                            row.dwOwningPid != 0
-                        {
-                            return row.dwOwningPid
+                let found = withUnsafeTemporaryAllocation(
+                    byteCount: Int(size), alignment: MemoryLayout<DWORD>.alignment
+                ) { buffer -> PID? in
+                    guard
+                        GetExtendedTcpTable(
+                            buffer.baseAddress, &size, false, ULONG(family),
+                            TCP_TABLE_OWNER_PID_ALL, 0) == 0
+                    else { return nil }
+
+                    let raw = UnsafeRawBufferPointer(buffer)
+                    let rowCount = Int(raw.load(as: DWORD.self))
+                    let header = MemoryLayout<DWORD>.size
+
+                    if family == AF_INET {
+                        let stride = MemoryLayout<MIB_TCPROW_OWNER_PID>.stride
+                        for i in 0..<rowCount {
+                            let row = raw.load(
+                                fromByteOffset: header + i * stride, as: MIB_TCPROW_OWNER_PID.self)
+                            if let pid = row.listeningPID(on: port) { return pid }
+                        }
+                    } else {
+                        let stride = MemoryLayout<MIB_TCP6ROW_OWNER_PID>.stride
+                        for i in 0..<rowCount {
+                            let row = raw.load(
+                                fromByteOffset: header + i * stride, as: MIB_TCP6ROW_OWNER_PID.self)
+                            if let pid = row.listeningPID(on: port) { return pid }
                         }
                     }
-                } else {
-                    let table = rows.assumingMemoryBound(to: MIB_TCP6ROW_OWNER_PID.self)
-                    for i in 0..<rowCount {
-                        let row = table[i]
-                        if row.dwState == listening,
-                            UInt16(bigEndian: UInt16(truncatingIfNeeded: row.dwLocalPort)) == port,
-                            row.dwOwningPid != 0
-                        {
-                            return row.dwOwningPid
-                        }
-                    }
+                    return nil
                 }
+                if let found { return found }
             }
         #endif
         return nil
@@ -96,3 +91,29 @@ public enum SystemProcess {
         #endif
     }
 }
+
+#if os(Windows)
+    extension MIB_TCPROW_OWNER_PID {
+        /// The owning PID when this row is the listener on `port`, otherwise nil.
+        fileprivate func listeningPID(on port: UInt16) -> DWORD? {
+            guard
+                dwState == DWORD(MIB_TCP_STATE_LISTEN.rawValue),
+                UInt16(bigEndian: UInt16(truncatingIfNeeded: dwLocalPort)) == port,
+                dwOwningPid != 0
+            else { return nil }
+            return dwOwningPid
+        }
+    }
+
+    extension MIB_TCP6ROW_OWNER_PID {
+        /// The owning PID when this row is the listener on `port`, otherwise nil.
+        fileprivate func listeningPID(on port: UInt16) -> DWORD? {
+            guard
+                dwState == DWORD(MIB_TCP_STATE_LISTEN.rawValue),
+                UInt16(bigEndian: UInt16(truncatingIfNeeded: dwLocalPort)) == port,
+                dwOwningPid != 0
+            else { return nil }
+            return dwOwningPid
+        }
+    }
+#endif
