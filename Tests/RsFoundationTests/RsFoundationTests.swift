@@ -91,6 +91,17 @@ func string() async throws {
 }
 
 @Test
+func stringXMLEntities() async throws {
+    // Text that itself looks like an entity: the escaped &amp; must not be unescaped twice.
+    let entity = "a &lt; b &amp; c"
+    #expect(entity.xmlEscaped() == "a &amp;lt; b &amp;amp; c")
+    #expect(entity.xmlEscaped().xmlUnescaped() == entity)
+
+    #expect("&amp;lt;".xmlUnescaped() == "&lt;")
+    #expect("&nbsp;".xmlUnescaped() == "&nbsp;")
+}
+
+@Test
 func url() async throws {
     let test_txt = Bundle.module.path(forResource: "test.txt")!
     let url = URL(filePath: test_txt)

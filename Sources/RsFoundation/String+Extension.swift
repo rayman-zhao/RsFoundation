@@ -142,23 +142,19 @@ import Foundation
 extension String {
     /// XML 特殊字符转义（写入XML文本节点/属性值）
     public func xmlEscaped() -> String {
-        return
-            self
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
-            .replacingOccurrences(of: "'", with: "&apos;")
+        let entities: [Substring: String] = [
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&apos;",
+        ]
+        return replacing(/[&<>'"]/) { entities[$0.output] ?? String($0.output) }
     }
 
     /// XML 反转义
+    ///
+    /// 单遍替换：`&amp;lt;` 反转义为字面 `&lt;`，而不会先解出 `&` 再被 `&lt;` 规则二次命中。
     public func xmlUnescaped() -> String {
-        return
-            self
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&apos;", with: "'")
+        let entities: [Substring: String] = [
+            "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'",
+        ]
+        return replacing(/&(amp|lt|gt|quot|apos);/) { entities[$0.output.1] ?? String($0.output.0) }
     }
 }
