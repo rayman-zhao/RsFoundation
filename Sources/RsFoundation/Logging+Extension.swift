@@ -6,10 +6,15 @@ import Synchronization
 
 private let logLabel = "swiftworks"
 
-/// Whether the global ``log`` has been materialized; read by
-/// ``FileLogging/bootstrap(directory:prefix:keepDays:level:)`` to police its
-/// ordering contract.
-let logMaterialized = Mutex(false)
+/// The call stack of the first access to the global ``log``, captured once by
+/// the logger's initializer and read by
+/// ``FileLogging/bootstrap(directory:prefix:keepDays:level:)`` to name the
+/// culprit when the ordering contract was violated. Symbol quality is
+/// platform-dependent — Swift's DWARF-in-PE is not resolved by
+/// `Thread.callStackSymbols`, so Windows stacks read as bare frames; the
+/// debug-time failure message therefore also points at the initializer, the
+/// stable spot to breakpoint and re-run.
+let logFirstUse = Mutex<String?>(nil)
 
 /// The global logger for the application.
 ///
@@ -20,7 +25,7 @@ let logMaterialized = Mutex(false)
 /// constant: level policy is this library's standardization job, not a
 /// per-call-site decision.
 public let log: Logger = {
-    logMaterialized.withLock { $0 = true }
+    logFirstUse.withLock { $0 = Thread.callStackSymbols.prefix(8).joined(separator: "\n") }
     var log = Logger(label: logLabel)
     log.logLevel = LoggingPolicy.effectiveLevel
     return log
@@ -334,10 +339,14 @@ public enum FileLogging {
 
         // Ordering contract: a bootstrap that runs after the global log was
         // first used would split output between stderr and the file — a
-        // client programming error. Surface it loudly instead of absorbing it.
-        if logMaterialized.withLock({ $0 }) {
-            let message = "FileLogging.bootstrap must run before any code touches the global log: "
-                + "earlier records are stderr-only and the global logger stays on stderr"
+        // client programming error. Surface it loudly instead of absorbing it,
+        // naming where the first use came from.
+        if let firstUse = logFirstUse.withLock({ $0 }) {
+            let message = "FileLogging.bootstrap must run before any code touches the global log "
+                + "(earlier records are stderr-only and the global logger stays on stderr). "
+                + "First use came from:\n\(firstUse)\n"
+                + "To catch it in the debugger, break at the start of the `log` initializer "
+                + "in Logging+Extension.swift and re-run."
             #if DEBUG
                 fatalError(message)
             #else

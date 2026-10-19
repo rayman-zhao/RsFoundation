@@ -292,9 +292,9 @@ struct GlobalLoggerTests {
         #expect(log.logLevel == LoggingPolicy.effectiveLevel)
     }
 
-    @Test("first use marks the global log as materialized")
+    @Test("first use records the access origin")
     func testMaterialization() {
-        #expect(logMaterialized.withLock { $0 })
+        #expect(logFirstUse.withLock { $0 } != nil)
     }
 
     @Test("a bootstrap level override replaces the effective level")
