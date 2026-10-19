@@ -48,18 +48,22 @@ import Foundation
 
     extension URL {
         /// Standard application support directory as macOS.
-        public static var applicationSupportDirectory: URL {
-            guard
-                let appSupportDir = FileManager.default.urls(
-                    for: .applicationSupportDirectory,
-                    in: .userDomainMask
-                ).first
-            else {
-                fatalError("Can't find applicationSupportDirectory with FileManager")
+        ///
+        /// Falls back to `%LOCALAPPDATA%`, then the temporary directory, when
+        /// the FileManager lookup fails. `path(percentEncoded:)` renders
+        /// Windows drive paths with corelibs' bogus root slash (`/C:/…`);
+        /// use ``filePath`` for display strings.
+        public static let applicationSupportDirectory: URL = {
+            if let dir = FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first {
+                return dir
             }
-
-            return appSupportDir
-        }
+            if let raw = ProcessInfo.processInfo.environment["LOCALAPPDATA"], !raw.isEmpty {
+                return URL(filePath: raw, directoryHint: .isDirectory)
+            }
+            return FileManager.default.temporaryDirectory
+        }()
 
         /// Version info of EXE/DLL files.
         public var version: String? {
