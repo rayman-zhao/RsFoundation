@@ -35,7 +35,9 @@ extension XMLDocument {
 
     /// Depth first traverse all elements of the XML document.
     ///
-    /// Only calls the closure for elements that have attributes.
+    /// Calls the closure once per attribute of each element; elements without
+    /// attributes get a single call with a nil attribute and their text
+    /// content as the value.
     ///
     /// - Parameters:
     ///   - root: Start element, default nil for the root element.
@@ -43,19 +45,13 @@ extension XMLDocument {
     ///   - body: The callback closure.
     public func forEachElement(
         from root: XMLElement? = nil, visitSelf: Bool = true,
-        _ body: (_ parent: String, _ name: String, _ attribute: String, _ value: String) -> Void
+        _ body: (_ parent: String, _ name: String, _ attribute: String?, _ value: String?) -> Void
     ) {
         guard let parent = root ?? rootElement() else { return }
 
         let pname = parent.name ?? ""
         if visitSelf {
-            parent.attributes?.forEach { attr in
-                if let aname = attr.name,
-                    let aval = attr.stringValue
-                {
-                    body(pname, pname, aname, aval)
-                }
-            }
+            emit(element: parent, ename: pname, pname: pname, body)
         }
 
         parent.children?.forEach { node in
@@ -63,15 +59,33 @@ extension XMLDocument {
                 let element = node as? XMLElement,
                 let ename = element.name
             {
-                element.attributes?.forEach { attr in
-                    if let aname = attr.name,
-                        let aval = attr.stringValue
-                    {
-                        body(pname, ename, aname, aval)
-                    }
-                }
+                emit(element: element, ename: ename, pname: pname, body)
                 forEachElement(from: element, visitSelf: false, body)
             }
         }
+    }
+
+    private func emit(
+        element: XMLElement, ename: String, pname: String,
+        _ body: (_ parent: String, _ name: String, _ attribute: String?, _ value: String?) -> Void
+    ) {
+        guard let attributes = element.attributes, !attributes.isEmpty else {
+            body(pname, ename, nil, textContent(of: element))
+            return
+        }
+        for attr in attributes {
+            if let aname = attr.name,
+                let aval = attr.stringValue
+            {
+                body(pname, ename, aname, aval)
+            }
+        }
+    }
+
+    private func textContent(of element: XMLElement) -> String? {
+        let text = element.children?
+            .compactMap { $0.kind == .text ? $0.stringValue : nil }
+            .joined() ?? ""
+        return text.isEmpty ? nil : text
     }
 }

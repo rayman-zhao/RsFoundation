@@ -212,4 +212,18 @@ func xml() async throws {
     #expect(throws: Error.self) {
         _ = try XMLDocument(utf16Data: Data())
     }
+
+    let books = try XMLDocument(
+        xmlString: """
+        <books><book id="1001"><name>The Great Gatsby</name></book><empty/></books>
+        """)
+    var elementCount = 0
+    var nameValue: String?
+    books.forEachElement { _, name, attribute, value in
+        guard attribute == nil else { return }
+        elementCount += 1
+        if name == "name" { nameValue = value }
+    }
+    #expect(nameValue == "The Great Gatsby")
+    #expect(elementCount == 3)
 }
