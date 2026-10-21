@@ -27,13 +27,41 @@ func data() async throws {
 }
 @Test(arguments: [
     ("lena.jpg", true),
-    ("lena.png", false),
+    ("lena.png", true),
     ("test.txt", false),
 ])
 func dataTypes(_ fn: String, _ img: Bool) async throws {
     let url = URL(filePath: try #require(Bundle.module.path(forResource: fn)))
     let d = try Data(contentsOf: url)
     #expect(d.isImage == img)
+}
+@Test(arguments: [
+    // The first segment marker is not constrained: Adobe APP14, not JFIF/Exif/DQT.
+    ([0xFF, 0xD8, 0xFF, 0xEE, 0x41, 0x64, 0x6F, 0x62, 0x65, 0xFF, 0xD9], true),
+    // Trailing bytes after EOI still reject.
+    ([0xFF, 0xD8, 0xFF, 0xEE, 0x41, 0x64, 0x6F, 0x62, 0x65, 0xFF, 0xD9, 0x0A], false),
+    // SOI followed by EOI only.
+    ([0xFF, 0xD8, 0xFF, 0xD9], false),
+])
+func dataJPEG(_ bytes: [UInt8], _ jpeg: Bool) async throws {
+    #expect(Data(bytes).isJPEG == jpeg)
+}
+
+private let pngSignature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+private let pngIEND: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82]
+// Signature + a stubbed IHDR chunk header + IEND.
+private let pngMinimal: [UInt8] = pngSignature + [0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52] + pngIEND
+private let pngTrailingByte: [UInt8] = pngMinimal + [0x0A]
+
+@Test(arguments: [
+    (pngMinimal, true),
+    // Trailing bytes after IEND still reject.
+    (pngTrailingByte, false),
+    // Signature alone, shorter than the IEND trailer.
+    (pngSignature, false),
+])
+func dataPNG(_ bytes: [UInt8], _ png: Bool) async throws {
+    #expect(Data(bytes).isPNG == png)
 }
 @Test
 func logger() async throws {

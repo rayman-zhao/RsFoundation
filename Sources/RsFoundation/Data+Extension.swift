@@ -48,15 +48,30 @@ extension Data {
     }
 
     /// A boolean value indicating whether the buffer is JPEG data.
+    ///
+    /// Detects the SOI magic at the start and the EOI marker at the end, without
+    /// constraining the first segment marker; buffers with trailing bytes after
+    /// EOI are rejected.
     public var isJPEG: Bool {
-        count > 6
+        count > 4
             && starts(with: [0xFF, 0xD8, 0xFF])
-            && (self[3] == 0xE0 || self[3] == 0xE1 || self[3] == 0xDB)
             && suffix(2).elementsEqual([0xFF, 0xD9])
     }
 
-    /// A boolean value indicating whether the buffer is any kind of image data.
+    /// A boolean value indicating whether the buffer is PNG data.
+    ///
+    /// Detects the 8-byte signature at the start and the IEND chunk at the end;
+    /// buffers with trailing bytes after IEND are rejected.
+    public var isPNG: Bool {
+        count >= 8 + 12
+            && starts(with: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+            && suffix(12).elementsEqual([0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82])
+    }
+
+    /// A boolean value indicating whether the buffer is image data.
+    ///
+    /// Only JPEG and PNG are recognized currently.
     public var isImage: Bool {
-        return isJPEG
+        return isJPEG || isPNG
     }
 }
