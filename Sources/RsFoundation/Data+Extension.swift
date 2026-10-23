@@ -49,13 +49,22 @@ extension Data {
 
     /// A boolean value indicating whether the buffer is JPEG data.
     ///
-    /// Detects the SOI magic at the start and the EOI marker at the end, without
-    /// constraining the first segment marker; buffers with trailing bytes after
-    /// EOI are rejected.
+    /// Detects the SOI magic at the start and an EOI marker searched from the
+    /// end, without constraining the first segment marker. Real-world buffers
+    /// put the EOI at (or within a few padding bytes of) the end, so the search
+    /// completes immediately almost always; bytes trailing after the EOI are
+    /// tolerated.
     public var isJPEG: Bool {
-        count > 4
-            && starts(with: [0xFF, 0xD8, 0xFF])
-            && suffix(2).elementsEqual([0xFF, 0xD9])
+        guard count > 4, starts(with: [0xFF, 0xD8, 0xFF]) else { return false }
+
+        var i = count - 2
+        while i > 0 {
+            if self[i] == 0xFF, self[i + 1] == 0xD9 {
+                return true
+            }
+            i -= 1
+        }
+        return false
     }
 
     /// A boolean value indicating whether the buffer is PNG data.
