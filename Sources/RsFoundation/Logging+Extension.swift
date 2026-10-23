@@ -241,16 +241,14 @@ struct FileLogHandler: LogHandler {
     /// within `days` days; `days` less than 1 disables pruning.
     static func prune(fileNamePrefix: String, in directory: URL, olderThanDays days: Int) {
         guard days >= 1 else { return }
-        let keys: Set<URLResourceKey> = [.contentModificationDateKey]
         guard let children = try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: Array(keys))
+            at: directory, includingPropertiesForKeys: nil)
         else { return }
 
         let cutoff = Date(timeIntervalSinceNow: -Double(days) * 86_400)
         for child in children
         where isDatedLogFile(child.lastPathComponent, prefix: fileNamePrefix) {
-            let modified = (try? child.resourceValues(forKeys: keys))?.contentModificationDate
-            if let modified, modified < cutoff {
+            if let modified = child.fileAttributes?[.modificationDate] as? Date, modified < cutoff {
                 try? FileManager.default.removeItem(at: child)
             }
         }

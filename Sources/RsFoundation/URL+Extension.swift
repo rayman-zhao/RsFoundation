@@ -73,10 +73,18 @@ import Foundation
 #endif
 
 extension URL {
+    /// File attributes of the URL, or nil when it can't be examined, e.g. it doesn't exist.
+    ///
+    /// - Important: Do not use `URL.resourceValues` for file metadata — it traps on
+    ///   files larger than 2 GiB on Windows (Int32 overflow inside corelibs-foundation),
+    ///   while `FileManager` handles them fine.
+    var fileAttributes: [FileAttributeKey: Any]? {
+        try? FileManager.default.attributesOfItem(atPath: path)
+    }
+
     /// The size of the file URL. -1 when failed to obtain.
     public var fileSize: Int {
-        let rv = try? resourceValues(forKeys: [.fileSizeKey])
-        return rv?.fileSize ?? -1
+        (fileAttributes?[.size] as? NSNumber)?.intValue ?? -1
     }
 
     /// The file path of the URL.
@@ -113,8 +121,8 @@ extension URL {
     /// This checks the file system instead, and falls back to `hasDirectoryPath` when the resource
     /// can't be examined, e.g. it doesn't exist yet.
     public var isDirectory: Bool {
-        if let isDirectory = (try? resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory {
-            return isDirectory
+        if let type = fileAttributes?[.type] as? FileAttributeType {
+            return type == .typeDirectory
         }
 
         return hasDirectoryPath
