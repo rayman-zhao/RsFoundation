@@ -205,6 +205,31 @@ func availableChild() throws {
 }
 
 @Test
+func reachableChildMatching() throws {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(
+            "RsFoundationTest_ReachableChildMatching_\(UUID().uuidString)",
+            isDirectory: true
+        )
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    for name in ["Report.txt", "img_1234.jpg", "PHOTO.JPEG", "notes.md"] {
+        try Data().write(to: directory.appendingPathComponent(name))
+    }
+
+    #expect(directory.reachableChild(matching: /\.jpg$/)?.lastPathComponent == "img_1234.jpg")
+    // (?i) for case-insensitivity; jpe?g covers both the jpg and jpeg extensions.
+    #expect(directory.reachableChild(matching: /^(?i)photo\.jpe?g$/)?.lastPathComponent == "PHOTO.JPEG")
+    #expect(directory.reachableChild(matching: /(?i)port/)?.lastPathComponent == "Report.txt")
+    #expect(directory.reachableChild(matching: /^(?i)report\.txt$/)?.lastPathComponent == "Report.txt")
+    #expect(directory.reachableChild(matching: /^img_.{4}\.jpg$/)?.lastPathComponent == "img_1234.jpg")
+    #expect(directory.reachableChild(matching: /^img_.{3}\.jpg$/) == nil)
+    #expect(directory.reachableChild(matching: /\.pdf$/) == nil)
+    #expect(directory.appendingPathComponent("Report.txt").reachableChild(matching: /./) == nil)
+}
+
+@Test
 func xml() async throws {
     // let xml = try XMLDocument(xmlString:
     // """

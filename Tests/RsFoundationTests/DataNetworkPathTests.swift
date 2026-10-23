@@ -88,4 +88,41 @@ struct DataNetworkPathTests {
             #expect(URL(filePath: child.filePath).reachable, "\(target.label): filePath should round-trip to the network folder")
         }
     }
+
+    /// `reachableChild(matching:)` 在 Windows 网络路径(UNC 与映射盘)上应能用正则匹配刚
+    /// 写入的子文件。
+    @Test("reachableChild(matching:) on network paths")
+    func testReachableChildMatchingOnNetworkPaths() {
+        let targets: [(label: String, dir: URL)] = [
+            ("UNC \\\\med-dev\\transfer\\zhaoyu", URL(filePath: #"\\med-dev\transfer\zhaoyu"#, directoryHint: .isDirectory)),
+            ("mapped drive z:/", URL(filePath: "z:/", directoryHint: .isDirectory)),
+        ]
+
+        for target in targets {
+            guard target.dir.isDirectory else {
+                print("Skipping \(target.label): not reachable")
+                continue
+            }
+
+            let dir = target.dir.appending(
+                component: "rsf_match_\(UUID().uuidString)", directoryHint: .isDirectory)
+            do {
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            } catch {
+                Issue.record("\(target.label): failed to create scratch directory: \(error)")
+                continue
+            }
+            defer { try? FileManager.default.removeItem(at: dir) }
+
+            let fileName = "rsf_net_\(UUID().uuidString).txt"
+            try? Data().write(to: dir.appending(component: fileName))
+
+            guard let child = dir.reachableChild(matching: /^rsf_net_.*\.txt$/) else {
+                Issue.record("\(target.label): reachableChild(matching:) returned nil")
+                continue
+            }
+            #expect(child.lastPathComponent == fileName, "\(target.label)")
+            #expect(dir.reachableChild(matching: /\.pdf$/) == nil, "\(target.label)")
+        }
+    }
 }

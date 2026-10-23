@@ -141,6 +141,27 @@ extension URL {
         return url.reachable ? url : nil
     }
 
+    /// Get the URL of the first child in the directory whose file name contains a regex match.
+    ///
+    /// The URL self should be a directory. The regex is searched within each child's file name;
+    /// anchor with `^`/`$` when the whole name must match. Only direct children are examined.
+    ///
+    /// ```swift
+    /// dir.reachableChild(matching: /(?i)\.jpe?g$/)       // any jpg/jpeg child, any case
+    /// dir.reachableChild(matching: /^(?i)report\./)      // name starts with "report", any case
+    /// dir.reachableChild(matching: /(?i)draft/) != nil   // existence check, substring search
+    /// ```
+    ///
+    /// - Parameter regex: The regex to match child file names against.
+    /// - Returns: The first matching child URL in directory-listing order, or nil when none matches.
+    public func reachableChild(matching regex: some RegexComponent) -> URL? {
+        guard self.isDirectory else { return nil }
+
+        let children = (try? FileManager.default.contentsOfDirectory(atPath: filePath)) ?? []
+        guard let match = children.first(where: { $0.contains(regex) }) else { return nil }
+        return self.appending(component: match)
+    }
+
     public func availableChild(baseNamed child: String) -> URL? {
         guard self.isDirectory else { return nil }
 
