@@ -114,6 +114,20 @@ extension URL {
         return (try? checkResourceIsReachable()) ?? false
     }
 
+    /// The Windows-conventional form of this file URL's path: backslash
+    /// separators, and no trailing separator except drive roots (`Z:\`).
+    ///
+    /// `filePath` keeps URL-internal details — forward slashes and a trailing
+    /// separator on directory URLs — while shell-facing callers (Explorer
+    /// picker results, Win32 APIs, user-visible storage) expect this form.
+    public var windowsPath: String {
+        var p = filePath
+        while p.hasSuffix("/"), p.dropLast().contains("/") {
+            p.removeLast()
+        }
+        return p.replacingOccurrences(of: "/", with: "\\")
+    }
+
     /// Whether the URL references a directory.
     ///
     /// `hasDirectoryPath` only reflects how the URL was constructed (a trailing path separator or an
