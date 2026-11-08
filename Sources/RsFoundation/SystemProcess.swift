@@ -10,6 +10,39 @@ import Foundation
 /// Locates and terminates system processes the runner did not spawn itself,
 /// e.g. a service process kept alive by a previous app session.
 public enum SystemProcess {
+    #if os(Windows)
+        /// Directory of the module (executable or DLL) that contains this code.
+        /// Unlike `Bundle.main`, the anchor follows the linking image: a static
+        /// library compiled into a host DLL resolves to that DLL's folder, even
+        /// when the host process runs from elsewhere (e.g. a COM surrogate).
+        /// A capture-free closure literal compiles to a function inside this
+        /// very image, so its address satisfies GetModuleHandleExW's
+        /// FROM_ADDRESS semantics.
+        public static let moduleDirectory: URL? = {
+            let probe: @convention(c) () -> Int32 = { 0 }
+            var module: HMODULE?
+            guard
+                GetModuleHandleExW(
+                    DWORD(
+                        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+                            | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT),
+                    unsafeBitCast(probe, to: LPCWSTR.self),
+                    &module
+                )
+            else { return nil }
+            var buf = [CWideChar](repeating: 0, count: Int(MAX_PATH))
+            let size = GetModuleFileNameW(module, &buf, UInt32(buf.count))
+            guard size > 0 else { return nil }
+            return URL(
+                filePath: String(decoding: Array(buf[..<Int(size)]), as: UTF16.self)
+            ).deletingLastPathComponent()
+        }()
+    #else
+        /// Host-image anchoring has no counterpart here; callers fall back to
+        /// bundle-relative lookups.
+        public static let moduleDirectory: URL? = nil
+    #endif
+
     /// Returns the PID of the local process listening on the given port
     /// (IPv4 and IPv6; same data source as `netstat -ano`).
     public static func pidListening(on port: UInt16) -> PID? {
