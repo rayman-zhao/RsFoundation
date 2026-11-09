@@ -34,7 +34,7 @@ public enum SystemProcess {
             let size = GetModuleFileNameW(module, &buf, UInt32(buf.count))
             guard size > 0 else { return nil }
             return URL(
-                filePath: String(decoding: Array(buf[..<Int(size)]), as: UTF16.self)
+                filePath: String(utf16: Array(buf[..<Int(size)]))
             ).deletingLastPathComponent()
         }()
     #else

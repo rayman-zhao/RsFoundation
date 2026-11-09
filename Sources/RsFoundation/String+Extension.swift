@@ -62,7 +62,20 @@ import Foundation
 
         public init(utf16: [UInt16]) {
             let cnt = utf16.last == 0 ? utf16.count - 1 : utf16.count
-            self = String(utf16CodeUnits: utf16, count: cnt)  // Have to do this, since String(encoding:utf16) can't work on Winodws.
+            // Not String(bytes:encoding:.utf16): without a BOM it assumes
+            // big-endian (the Unicode default), silently misreading the
+            // little-endian wide-char data Windows APIs produce. Verified on
+            // Swift 6.4.2 / Windows: returns swapped garbage, not nil.
+            self = String(utf16CodeUnits: utf16, count: cnt)
+        }
+
+        /// Creates a string from a null-terminated wide-character string, as
+        /// received across the Win32 C ABI. Returns nil for a null pointer.
+        public init?(cWideString: UnsafePointer<CWideChar>?) {
+            guard let cWideString else { return nil }
+            var length = 0
+            while cWideString[length] != 0 { length += 1 }
+            self = String(utf16CodeUnits: cWideString, count: length)
         }
 
         public init(utf16Data: Data) {
