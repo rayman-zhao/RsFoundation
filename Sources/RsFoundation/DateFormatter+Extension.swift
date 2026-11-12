@@ -52,6 +52,8 @@ extension DateFormatter {
         #if os(Windows)
             // Keep the literal pattern; the locale would rewrite it otherwise.
             locale = Locale(identifier: "en_US_POSIX")
+            // TimeZone.current resolves to GMT on Windows; see TimeZone.systemCurrent
+            timeZone = .systemCurrent
 
             var parts: [String] = []
             if systemDate, let picture = windowsDatePicture(LCTYPE(LOCALE_SSHORTDATE)) {
