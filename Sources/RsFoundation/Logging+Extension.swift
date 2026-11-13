@@ -2,6 +2,10 @@ import Foundation
 import Logging
 import Synchronization
 
+#if os(Windows)
+    import WinSDK
+#endif
+
 // MARK: - Global Logger
 
 private let logLabel = "swiftworks"
@@ -306,10 +310,9 @@ public enum FileLogging {
     /// `TimeZone.current`. Files not modified within `keepDays` days are
     /// deleted during this call.
     ///
-    /// The app decides where logs live: unpackaged apps usually pass
-    /// ``defaultDirectory(group:product:)``, MSIX-packaged apps their
-    /// package's writable LocalState folder. When the directory cannot be
-    /// created the process stays on stderr-only logging.
+    /// The app decides where logs live: ``defaultDirectory(group:product:)``
+    /// resolves unpackaged and MSIX-packaged processes alike. When the
+    /// directory cannot be created the process stays on stderr-only logging.
     ///
     /// - Parameters:
     ///   - directory: Where log files are created.
@@ -378,8 +381,18 @@ public enum FileLogging {
     /// by `group` the way ``JSONPreferences/makeStandard(group:product:name:)``
     /// namespaces its preference files. On Windows the root is the same
     /// ``URL/applicationSupportDirectory`` the preference files live under
-    /// (`%LOCALAPPDATA%\<group>\<product>\Logs`); on macOS it is the
+    /// (`%LOCALAPPDATA%\<group>\<product>\Logs`) — unless the process runs
+    /// with MSIX package identity, in which case the package's
+    /// `%LOCALAPPDATA%\Packages\<family>\LocalState\Logs` is returned:
+    /// MSIX copy-on-write virtualization relays AppData writes into the
+    /// package's `LocalCache`, invisible to File Explorer, while `LocalState`
+    /// is real on disk. The package family name already identifies the app,
+    /// so `group` and `product` are not nested under it. On macOS it is the
     /// platform's dedicated logs folder (`~/Library/Logs/<group>/<product>`).
+    ///
+    /// Must stay free of `log` calls: callers pass this as the `directory`
+    /// argument of ``bootstrap(directory:prefix:keepDays:level:)``, where it
+    /// evaluates before the file backend exists.
     public static func defaultDirectory(group: String, product: String) -> URL {
         #if os(macOS)
             let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
@@ -390,10 +403,29 @@ public enum FileLogging {
                 .appending(component: group, directoryHint: .isDirectory)
                 .appending(component: product, directoryHint: .isDirectory)
         #else
-            URL.applicationSupportDirectory
+            if let localState = packagedLocalState() {
+                return localState.appending(component: "Logs", directoryHint: .isDirectory)
+            }
+            return URL.applicationSupportDirectory
                 .appending(component: group, directoryHint: .isDirectory)
                 .appending(component: product, directoryHint: .isDirectory)
                 .appending(component: "Logs", directoryHint: .isDirectory)
         #endif
     }
+
+    #if os(Windows)
+        private static func packagedLocalState() -> URL? {
+            var length: UInt32 = 0
+            if GetCurrentPackageFamilyName(&length, nil) == APPMODEL_ERROR_NO_PACKAGE {
+                return nil
+            }
+            var name = [WCHAR](repeating: 0, count: Int(length))
+            guard GetCurrentPackageFamilyName(&length, &name) == ERROR_SUCCESS else { return nil }
+            let familyName = String(decoding: name.prefix(Int(length) - 1), as: UTF16.self)
+            return URL.applicationSupportDirectory
+                .appending(component: "Packages", directoryHint: .isDirectory)
+                .appending(component: familyName, directoryHint: .isDirectory)
+                .appending(component: "LocalState", directoryHint: .isDirectory)
+        }
+    #endif
 }
